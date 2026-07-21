@@ -14,3 +14,11 @@ custom_domain = true
 
 [vars]
 CF_ACCOUNT_ID = "cd6cc52f00a3b9a52381d1b97f255b48"
+ALERT_EMAIL_TO = "fancy.chenyf@gmail.com"
+
+[triggers]
+crons = ["0 */3 * * *"]
+
+[[kv_namespaces]]
+binding = "FLEET_STATE"
+id = "bf12435b0d534e7e8b0031ed599d9f96"

@@ -2,6 +2,9 @@ export interface Env {
   CF_API_TOKEN: string;
   CF_ACCOUNT_ID: string;
   ASSETS: Fetcher;
+  RESEND_API_KEY: string;
+  ALERT_EMAIL_TO: string;
+  FLEET_STATE: KVNamespace;
 }
 
 const API_BASE = "https://api.cloudflare.com/client/v4";
@@ -203,7 +206,6 @@ export async function buildFleet(env: Env): Promise<{
 
   // hostname -> { tunnelId, service }
   const tunnelHostMap = new Map<string, { tunnelId: string; service: string }>();
-  const tunnelById = new Map(tunnels.map((t) => [t.id, t]));
 
   await Promise.all(
     tunnels.map(async (t) => {
