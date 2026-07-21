@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>fleet-status — portal.roarland.net</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="console">
+
+  <div class="console-bar">
+    <div class="console-dots"><span></span><span></span><span></span></div>
+    <div class="console-title mono">portal.roarland.net — fleet-status</div>
+    <div class="console-clock mono" id="clock">--:--:--</div>
+  </div>
+
+  <div class="console-body">
+    <header class="page-head">
+      <div class="head-text">
+        <div class="prompt mono"><span class="prompt-glyph">&gt;</span> fleet --probe --live</div>
+        <h1>Fleet Status</h1>
+        <div class="subline" id="subline">Contacting Cloudflare&hellip;</div>
+      </div>
+      <button class="refresh-btn mono" id="refresh-btn">[ ⟳ refresh ]</button>
+    </header>
+
+    <div id="tabbar" class="tabbar mono" role="tablist" aria-label="Domain"></div>
+    <div id="panels"></div>
+
+    <section class="group" id="devices-section">
+      <div class="group-head">
+        <h2>WARP devices</h2>
+        <div class="note" id="devices-note"></div>
+      </div>
+      <div class="cards" id="devices-grid"></div>
+    </section>
+
+    <footer class="page-foot mono">
+      <span>signal source: Cloudflare API + live HTTPS probes</span>
+      <span id="page-clock-note">auto-refresh every 60s</span>
+    </footer>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

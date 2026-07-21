@@ -1,0 +1,16 @@
+name = "cf-portal"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+account_id = "cd6cc52f00a3b9a52381d1b97f255b48"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[[routes]]
+pattern = "portal.roarland.net"
+custom_domain = true
+
+[vars]
+CF_ACCOUNT_ID = "cd6cc52f00a3b9a52381d1b97f255b48"
