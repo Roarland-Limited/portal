@@ -57,7 +57,7 @@ export interface CfDevice {
   last_seen?: string;
 }
 
-export type HostStatus = "online" | "gated" | "degraded" | "offline";
+export type HostStatus = "online" | "gated" | "degraded" | "offline" | "unprobed";
 export type HostGroupKey = "tunnel" | "direct" | "worker";
 
 export interface HostCard {
@@ -99,6 +99,21 @@ const GROUP_META: Record<HostGroupKey, { title: string; note: string }> = {
     note: "Served at the edge by a Worker, no origin server to lose",
   },
 };
+
+// Hosts an HTTPS GET can never say anything useful about. Probing them anyway
+// produces a permanent red light that trains you to ignore the board.
+const SELF_WORKER = "cf-portal";
+const RAW_TCP_LABELS = new Set(["frp", "derp"]);
+
+function probeSkipReason(hostname: string, workerService: string | null): string | null {
+  // A Worker cannot fetch its own custom domain — subrequest loop protection
+  // rejects it, which looked like an origin handshake failure.
+  if (workerService === SELF_WORKER) return "Portal's own hostname — a Worker cannot fetch itself";
+  // frp/derp speak their own protocols on their own ports; 443 belongs to
+  // something else entirely, so the TLS handshake was always going to fail.
+  if (RAW_TCP_LABELS.has(hostname.split(".")[0])) return "Raw TCP endpoint — no HTTP service to probe";
+  return null;
+}
 
 async function probeHost(hostname: string): Promise<{
   status: HostStatus;
@@ -237,7 +252,13 @@ export async function buildFleet(env: Env): Promise<{
         byName.set(r.name, list);
       }
 
-      type Classified = { hostname: string; group: HostGroupKey; purpose: string; target: string };
+      type Classified = {
+        hostname: string;
+        group: HostGroupKey;
+        purpose: string;
+        target: string;
+        skip: string | null;
+      };
       const classified: Classified[] = [];
 
       for (const [hostname, recs] of byName) {
@@ -245,7 +266,13 @@ export async function buildFleet(env: Env): Promise<{
           const label = hostname.split(".")[0];
           const purpose = hostname === zone.name ? "Apex" : label === "www" ? "Site" : titleCase(label);
           const service = workerDomains.find((d) => d.hostname === hostname)?.service ?? "worker";
-          classified.push({ hostname, group: "worker", purpose, target: service });
+          classified.push({
+            hostname,
+            group: "worker",
+            purpose,
+            target: service,
+            skip: probeSkipReason(hostname, service),
+          });
           continue;
         }
 
@@ -254,7 +281,13 @@ export async function buildFleet(env: Env): Promise<{
           const tunnelId = tunnelCname.content.replace(".cfargotunnel.com", "");
           const info = tunnelHostMap.get(hostname);
           const purpose = info ? tunnelPurpose(info.service) : "Tunnel route";
-          classified.push({ hostname, group: "tunnel", purpose, target: shortId(tunnelId) });
+          classified.push({
+            hostname,
+            group: "tunnel",
+            purpose,
+            target: shortId(tunnelId),
+            skip: probeSkipReason(hostname, null),
+          });
           continue;
         }
 
@@ -265,12 +298,25 @@ export async function buildFleet(env: Env): Promise<{
           group: "direct",
           purpose: proxied ? "Proxied" : "DNS only",
           target,
+          skip: probeSkipReason(hostname, null),
         });
       }
 
-      const probes = await Promise.all(classified.map((c) => probeHost(c.hostname)));
+      const probes = await Promise.all(
+        classified.map((c) =>
+          c.skip
+            ? Promise.resolve({
+                status: "unprobed" as HostStatus,
+                http_status: null,
+                latency_ms: null,
+                code_label: "not probed",
+                note: c.skip,
+              })
+            : probeHost(c.hostname)
+        )
+      );
 
-      const stats: Record<HostStatus, number> = { online: 0, gated: 0, degraded: 0, offline: 0 };
+      const stats: Record<HostStatus, number> = { online: 0, gated: 0, degraded: 0, offline: 0, unprobed: 0 };
       const groupMap = new Map<HostGroupKey, HostCard[]>();
 
       classified.forEach((c, i) => {

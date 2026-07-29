@@ -17,12 +17,19 @@ function timeAgo(iso) {
 }
 
 function latWidth(host) {
+  if (host.status === "unprobed") return 0;
   if (host.status === "offline") return 100;
   const ms = /^\d+ ms$/.test(host.note) ? parseInt(host.note, 10) : 60;
   return Math.max(4, Math.min(100, Math.round(ms / 30)));
 }
 
-const STATUS_LABEL = { online: "ONLINE", gated: "GATED", degraded: "DEGRADED", offline: "OFFLINE" };
+const STATUS_LABEL = {
+  online: "ONLINE",
+  gated: "GATED",
+  degraded: "DEGRADED",
+  offline: "OFFLINE",
+  unprobed: "NOT PROBED",
+};
 
 function hostCard(h) {
   const actionLabel = h.purpose && h.purpose.toLowerCase().includes("ssh") ? "open terminal" : "open site";
@@ -54,7 +61,8 @@ function zonePanel(zone, index) {
       </section>`).join("")
     : `<div class="empty-state">Nothing on record for this zone yet.</div>`;
 
-  const total = zone.stats.online + zone.stats.gated + zone.stats.degraded + zone.stats.offline;
+  const total =
+    zone.stats.online + zone.stats.gated + zone.stats.degraded + zone.stats.offline + (zone.stats.unprobed ?? 0);
 
   return `
     <div class="tabpanel" id="panel-${index}" role="tabpanel" aria-labelledby="tab-${index}" ${index === 0 ? "" : "hidden"}>
@@ -63,6 +71,7 @@ function zonePanel(zone, index) {
         <div class="stat gated"><div class="n mono">${zone.stats.gated}</div><div class="l">Gated (Access)</div></div>
         <div class="stat degraded"><div class="n mono">${zone.stats.degraded}</div><div class="l">Degraded</div></div>
         <div class="stat offline"><div class="n mono">${zone.stats.offline}</div><div class="l">Offline</div></div>
+        <div class="stat unprobed"><div class="n mono">${zone.stats.unprobed ?? 0}</div><div class="l">Not probed</div></div>
       </div>
       ${groupsHtml}
       <footer class="foot mono">

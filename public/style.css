@@ -155,6 +155,8 @@ h1 {
 .stat.gated { border-left-color: var(--gated); } .stat.gated .n { color: var(--gated); }
 .stat.degraded { border-left-color: var(--warn); } .stat.degraded .n { color: var(--warn); }
 .stat.offline { border-left-color: var(--bad); } .stat.offline .n { color: var(--bad); }
+/* Deliberately colourless: "not probed" is an absence of signal, not a verdict. */
+.stat.unprobed { border-left-color: var(--muted); } .stat.unprobed .n { color: var(--muted); }
 
 section.group { margin-bottom: 30px; }
 
@@ -205,6 +207,7 @@ section.group { margin-bottom: 30px; }
 .card[data-status="gated"] { border-left-color: var(--gated); }
 .card[data-status="degraded"] { border-left-color: var(--warn); }
 .card[data-status="offline"] { border-left-color: var(--bad); }
+.card[data-status="unprobed"] { border-left-color: var(--muted); }
 
 .card-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 
@@ -232,6 +235,7 @@ section.group { margin-bottom: 30px; }
 .card[data-status="gated"] .status-tag { color: var(--gated); }
 .card[data-status="degraded"] .status-tag { color: var(--warn); }
 .card[data-status="offline"] .status-tag { color: var(--bad); }
+.card[data-status="unprobed"] .status-tag { color: var(--muted); }
 
 .ping-dot { position: relative; width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
 .card[data-status="online"] .ping-dot::after {
