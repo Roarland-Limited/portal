@@ -47,10 +47,12 @@ including a `falseAlarms` list naming hosts the confirmation step rescued.
 
 ## GitHub Actions board (`/actions`)
 
-A second page scans your own GitHub repos and lists what every workflow last did.
+A second page scans your GitHub repos — personal and organization — and lists what every
+workflow last did.
 
-The scan walks `/user/repos?affiliation=owner`, newest push first, skipping forks and
-archived repos (inherited or frozen workflows nobody will act on). For each repo it
+The scan walks `/user/repos?affiliation=owner,organization_member`, newest push first,
+skipping forks and archived repos (inherited or frozen workflows nobody will act on).
+Repo cards are titled `owner/repo`, so the search box doubles as an org filter. For each repo it
 asks for the workflow definitions; repos with none drop out. Repos that have workflows
 get a single `/actions/runs` call — one request covers every workflow in the repo — and
 the runs are grouped per workflow to give the latest result plus the last 7 as a strip.
@@ -110,7 +112,23 @@ All three secrets live in the Cloudflare dashboard, not in this repo and not in
 |---|---|
 | `CF_API_TOKEN` | Cloudflare API token: `Zone:Read`, `DNS:Read`, `Account:Cloudflare Tunnel:Read`, `Account:Zero Trust:Read` |
 | `RESEND_API_KEY` | Resend API key, for the offline alert emails |
-| `GITHUB_TOKEN` | GitHub PAT for the `/actions` page. Fine-grained: **Actions: read-only** + **Metadata: read-only** on the repos to list. Classic: `repo`, or `public_repo` if nothing private should appear |
+| `GITHUB_TOKEN` | GitHub PAT for the `/actions` page — see below |
+
+### Choosing the GitHub token type
+
+A fine-grained PAT has exactly **one** resource owner — your account *or* one org, never
+both. Since the scan covers personal and org repos together, one fine-grained token
+cannot cover it:
+
+- **Classic PAT with `repo`** — the only single token that spans your repos and every org
+  you belong to. If an org enforces SAML SSO, open the token's **Configure SSO** button
+  and authorize that org, or its repos stay invisible with no error shown.
+- **Fine-grained PAT** — needs **Actions: read-only** + **Metadata: read-only**, and the
+  resource owner set to the org (an org admin may have to approve the request). Covers
+  that one owner only; repos outside it silently drop out of the list.
+
+Both fail the same quiet way when access is missing — repos just don't appear. If a repo
+you expect is absent, that is an access problem, not an empty result.
 
 Secrets set in the dashboard survive every deploy — `wrangler deploy` and Workers Builds
 both leave them alone. Editing a secret's value takes effect on save, no redeploy needed.

@@ -212,8 +212,15 @@ export async function buildGithubFleet(env: Env): Promise<GithubFleet> {
   const rate: RateHolder = { info: null };
   const limit = Number(env.GITHUB_REPO_LIMIT ?? "") || DEFAULT_REPO_LIMIT;
 
+  // organization_member pulls in org repos alongside personal ones. Sorted by
+  // push date, so the 100 the API returns are always the 100 most recently
+  // touched — the cap below trims from an already-relevant list.
   const allRepos =
-    (await ghFetch<GhRepo[]>(env, `/user/repos?affiliation=owner&sort=pushed&direction=desc&per_page=100`, rate)) ?? [];
+    (await ghFetch<GhRepo[]>(
+      env,
+      `/user/repos?affiliation=owner,organization_member&sort=pushed&direction=desc&per_page=100`,
+      rate
+    )) ?? [];
 
   // Forks and archives carry inherited or frozen workflows that nobody is
   // going to act on; they'd only pad the board.

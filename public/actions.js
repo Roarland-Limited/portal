@@ -143,7 +143,7 @@ function render() {
         : `No workflows found in the ${data.scanned_repos} repos scanned. Add a file under <code>.github/workflows/</code> and it shows up here.`}</div>`;
 
   document.getElementById("scan-note").textContent =
-    `scanned ${data.scanned_repos} own repos, newest push first${data.truncated ? ` (${data.truncated} more not scanned)` : ""}`;
+    `scanned ${data.scanned_repos} repos (personal + org), newest push first${data.truncated ? ` (${data.truncated} more not scanned)` : ""}`;
 
   document.getElementById("rate-note").textContent = data.rate
     ? `github api: ${data.rate.remaining}/${data.rate.limit} left, resets ${new Date(data.rate.reset * 1000).toLocaleTimeString()}`
