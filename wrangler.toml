@@ -8,12 +8,8 @@ account_id = "cd6cc52f00a3b9a52381d1b97f255b48"
 directory = "./public"
 binding = "ASSETS"
 
-[[routes]]
-pattern = "portal.roarland.net"
-custom_domain = true
-
-# Added when roarland.ai became the primary domain. Both hostnames are bound in
-# the dashboard; keep them declared here so a deploy doesn't drop one.
+# roarland.ai is the only domain now. portal.roarland.net was dropped once its
+# zone left the account — deploys failed on it with "Could not find zone".
 [[routes]]
 pattern = "portal.roarland.ai"
 custom_domain = true

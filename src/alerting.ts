@@ -119,7 +119,7 @@ async function sendAlertEmail(
       from: "Fleet Status <onboarding@resend.dev>",
       to: [env.ALERT_EMAIL_TO],
       subject: `[Fleet Status] ${subjectBits.join(", ")}`,
-      html: `<div style="font-family:sans-serif">${parts.join("")}<p style="color:#8b93a7;font-size:12px;margin-top:20px">portal.roarland.net</p></div>`,
+      html: `<div style="font-family:sans-serif">${parts.join("")}<p style="color:#8b93a7;font-size:12px;margin-top:20px">portal.roarland.ai</p></div>`,
     }),
   });
 

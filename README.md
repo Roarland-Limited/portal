@@ -1,6 +1,6 @@
 # Cloudflare Fleet Status Portal
 
-A live status console for a personal Cloudflare account — every domain, every DNS host behind it (tunnels, direct records, Workers), and enrolled WARP devices, in one page. Deployed at [portal.roarland.net](https://portal.roarland.net).
+A live status console for a personal Cloudflare account — every domain, every DNS host behind it (tunnels, direct records, Workers), and enrolled WARP devices, in one page. Deployed at [portal.roarland.ai](https://portal.roarland.ai).
 
 Each zone gets its own tab. Every host card is a real link to the live service, colored by a combined signal: Cloudflare's own status plus a real HTTPS probe run at request time.
 
@@ -84,7 +84,7 @@ public/
   actions.html     GitHub Actions shell (served at /actions)
   actions.js       Fetches /api/actions, renders filters + workflow cards
   style.css        Signal-console theme (dark, monospace-forward), shared
-wrangler.toml      Worker config, static assets binding, portal.roarland.net route
+wrangler.toml      Worker config, static assets binding, portal.roarland.ai route
 ```
 
 ## Local development
