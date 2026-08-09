@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>gh-actions — portal.roarland.net</title>
+<link rel="icon" href="/favicon.ico">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="console">
+
+  <div class="console-bar">
+    <div class="console-dots"><span></span><span></span><span></span></div>
+    <nav class="console-nav mono">
+      <a href="/">fleet-status</a>
+      <a href="/actions" class="active" aria-current="page">gh-actions</a>
+    </nav>
+    <div class="console-clock mono" id="clock">--:--:--</div>
+  </div>
+
+  <div class="console-body">
+    <header class="page-head">
+      <div class="head-text">
+        <div class="prompt mono"><span class="prompt-glyph">&gt;</span> gh workflow list --all-repos</div>
+        <h1>Workflow Runs</h1>
+        <div class="subline" id="subline">Scanning GitHub&hellip;</div>
+      </div>
+      <button class="refresh-btn mono" id="refresh-btn">[ ⟳ rescan ]</button>
+    </header>
+
+    <div class="summary-row" id="summary"></div>
+
+    <div class="filter-row">
+      <div id="tabbar" class="tabbar mono" role="tablist" aria-label="Filter by result"></div>
+      <input class="filter-input mono" id="search" type="search" placeholder="filter repo / workflow…" aria-label="Filter by repo or workflow name">
+    </div>
+
+    <div id="repos"></div>
+
+    <footer class="page-foot mono">
+      <span id="scan-note">signal source: GitHub Actions API</span>
+      <span id="rate-note"></span>
+    </footer>
+  </div>
+</div>
+
+<script src="/actions.js"></script>
+</body>
+</html>

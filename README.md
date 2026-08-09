@@ -45,16 +45,45 @@ bounds how long the check can run.
 `GET /api/check-alerts` runs the whole thing on demand and returns what it found,
 including a `falseAlarms` list naming hosts the confirmation step rescued.
 
+## GitHub Actions board (`/actions`)
+
+A second page scans your own GitHub repos and lists what every workflow last did.
+
+The scan walks `/user/repos?affiliation=owner`, newest push first, skipping forks and
+archived repos (inherited or frozen workflows nobody will act on). For each repo it
+asks for the workflow definitions; repos with none drop out. Repos that have workflows
+get a single `/actions/runs` call — one request covers every workflow in the repo — and
+the runs are grouped per workflow to give the latest result plus the last 7 as a strip.
+
+| State | Meaning |
+|---|---|
+| `PASSING` | Latest run completed with `success` |
+| `FAILING` | Latest run was `failure`, `timed_out`, or `startup_failure` |
+| `NEEDS ACTION` | Latest run is waiting on `action_required` |
+| `RUNNING` | Latest run is queued, in progress, or waiting |
+| `NO VERDICT` | Latest run was cancelled, skipped, neutral, or stale |
+| `NEVER RUN` | Workflow file exists but has never been triggered |
+
+Repos sort worst-first, and each repo takes the state of its unhealthiest workflow.
+Filter tabs narrow to failing / running / passing / never-run; the search box filters
+by repo or workflow name. Scans are capped at 40 repos (`GITHUB_REPO_LIMIT` overrides)
+so one refresh can't exhaust the Worker's subrequest budget or the hourly GitHub rate
+limit — the remaining quota is printed in the page footer.
+
 ## Project layout
 
 ```
 src/
-  index.ts        Hono app, single /api/fleet route
+  index.ts         Hono app: /api/fleet, /api/actions, /api/check-alerts
   cloudflare.ts    Cloudflare API client + host classification + HTTP probing
+  github.ts        GitHub API client + repo scan + workflow run grouping
+  alerting.ts      Offline detection + Resend email, driven by the cron trigger
 public/
-  index.html       Static shell
+  index.html       Fleet status shell
   app.js           Fetches /api/fleet, renders tabs/cards, client-side only
-  style.css        Signal-console theme (dark, monospace-forward)
+  actions.html     GitHub Actions shell (served at /actions)
+  actions.js       Fetches /api/actions, renders filters + workflow cards
+  style.css        Signal-console theme (dark, monospace-forward), shared
 wrangler.toml      Worker config, static assets binding, portal.roarland.net route
 ```
 
@@ -62,18 +91,34 @@ wrangler.toml      Worker config, static assets binding, portal.roarland.net rou
 
 ```
 npm install
-cp .dev.vars.example .dev.vars   # fill in CF_API_TOKEN
+cp .dev.vars.example .dev.vars   # fill in the three tokens
 npm run dev
 ```
 
-Requires a Cloudflare API token with `Zone:Read`, `DNS:Read`, `Account:Cloudflare Tunnel:Read`, `Account:Zero Trust:Read`, and `Account:Workers Scripts:Edit` (the last one only needed for deploys).
+`.dev.vars` is local only — it is gitignored, and `wrangler dev` reads it instead of the
+deployed secrets. The deployed Worker never sees this file.
+
+## Secrets
+
+All three secrets live in the Cloudflare dashboard, not in this repo and not in
+`wrangler.toml`:
+
+**Workers & Pages → cf-portal → Settings → Variables and Secrets → Add**, type
+**Secret**, then Deploy.
+
+| Secret | What it needs |
+|---|---|
+| `CF_API_TOKEN` | Cloudflare API token: `Zone:Read`, `DNS:Read`, `Account:Cloudflare Tunnel:Read`, `Account:Zero Trust:Read` |
+| `RESEND_API_KEY` | Resend API key, for the offline alert emails |
+| `GITHUB_TOKEN` | GitHub PAT for the `/actions` page. Fine-grained: **Actions: read-only** + **Metadata: read-only** on the repos to list. Classic: `repo`, or `public_repo` if nothing private should appear |
+
+Secrets set in the dashboard survive every deploy — `wrangler deploy` and Workers Builds
+both leave them alone. Editing a secret's value takes effect on save, no redeploy needed.
 
 ## Deploy
 
 ```
 npm run deploy
 ```
-
-The `CF_API_TOKEN` secret is set once via `wrangler secret put CF_API_TOKEN` and persists across deploys — it is never committed to this repo.
 
 If this repo is connected to Cloudflare's Git integration (Workers Builds), every push to `main` deploys automatically and `npm run deploy` is no longer needed locally.

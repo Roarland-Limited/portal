@@ -5,6 +5,8 @@ export interface Env {
   RESEND_API_KEY: string;
   ALERT_EMAIL_TO: string;
   FLEET_STATE: KVNamespace;
+  GITHUB_TOKEN: string;
+  GITHUB_REPO_LIMIT?: string;
 }
 
 const API_BASE = "https://api.cloudflare.com/client/v4";
