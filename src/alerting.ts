@@ -1,5 +1,41 @@
 import type { Env } from "./cloudflare";
-import { buildFleet } from "./cloudflare";
+import { buildFleet, probeHost } from "./cloudflare";
+
+// A single missed deadline is not an outage. The fleet scan probes every host
+// at once, so one slow origin — an uncached WordPress render, say — can miss
+// its deadline partly because of the pile-up the scan itself created. Re-probe
+// the failures on their own, spaced out, with a deadline no real site should
+// need, and only believe the ones that fail every single time.
+const CONFIRM_ATTEMPTS = 2;
+const CONFIRM_DELAY_MS = 3_000;
+const CONFIRM_TIMEOUT_MS = 25_000;
+// Past this many hosts down at once it isn't a flaky probe, it's a tunnel or a
+// box — confirming would only delay the mail by minutes. Also what bounds how
+// long this whole check can run.
+const CONFIRM_MAX_HOSTS = 3;
+
+async function confirmOffline(items: MonitorItem[]): Promise<string[]> {
+  // Devices are judged by Cloudflare's last_seen timestamp, not by a probe —
+  // there is nothing to re-check, and the value doesn't flap.
+  const suspects = items.filter((i) => i.kind === "host" && i.status === "offline");
+  const falseAlarms: string[] = [];
+
+  if (suspects.length > CONFIRM_MAX_HOSTS) return falseAlarms;
+
+  for (const item of suspects) {
+    for (let attempt = 1; attempt <= CONFIRM_ATTEMPTS; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, CONFIRM_DELAY_MS));
+      const probe = await probeHost(item.label, CONFIRM_TIMEOUT_MS);
+      if (probe.status !== "offline") {
+        item.status = "online";
+        falseAlarms.push(`${item.label} (recovered on confirm ${attempt}: ${probe.code_label}, ${probe.note})`);
+        break;
+      }
+    }
+  }
+
+  return falseAlarms;
+}
 
 export interface MonitorItem {
   id: string;
@@ -97,11 +133,13 @@ export interface CheckResult {
   checked: number;
   wentOffline: MonitorItem[];
   recovered: MonitorItem[];
+  falseAlarms: string[];
   emailed: boolean;
 }
 
 export async function runOfflineCheck(env: Env): Promise<CheckResult> {
   const items = await collectMonitorItems(env);
+  const falseAlarms = await confirmOffline(items);
 
   const previousRaw = await env.FLEET_STATE.get("last_state");
   const previous: Record<string, string> = previousRaw ? JSON.parse(previousRaw) : {};
@@ -128,5 +166,5 @@ export async function runOfflineCheck(env: Env): Promise<CheckResult> {
   for (const item of items) nextState[item.id] = item.status;
   await env.FLEET_STATE.put("last_state", JSON.stringify(nextState));
 
-  return { checked: items.length, wentOffline, recovered, emailed };
+  return { checked: items.length, wentOffline, recovered, falseAlarms, emailed };
 }

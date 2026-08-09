@@ -115,7 +115,18 @@ function probeSkipReason(hostname: string, workerService: string | null): string
   return null;
 }
 
-async function probeHost(hostname: string): Promise<{
+// 6s used to be the deadline, which sat right on top of an uncached WordPress
+// render (measured 5.7–9.1s cold on shop.roarland.ai). Half the scans tripped
+// the timeout on a site that was serving fine, so the board flapped.
+export const PROBE_TIMEOUT_MS = 12_000;
+
+// Above this a response is worth calling out, but it is still a response.
+const SLOW_MS = 4_000;
+
+export async function probeHost(
+  hostname: string,
+  timeoutMs: number = PROBE_TIMEOUT_MS
+): Promise<{
   status: HostStatus;
   http_status: number | null;
   latency_ms: number | null;
@@ -126,7 +137,7 @@ async function probeHost(hostname: string): Promise<{
   try {
     const res = await fetch(`https://${hostname}/`, {
       redirect: "follow",
-      signal: AbortSignal.timeout(6000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     const latency = Date.now() - start;
     let finalHost = "";
@@ -150,7 +161,9 @@ async function probeHost(hostname: string): Promise<{
         http_status: res.status,
         latency_ms: latency,
         code_label: `HTTP ${res.status}`,
-        note: `${latency} ms`,
+        // Surface the slowness instead of hiding it behind a green light —
+        // it's the thing that used to get misread as an outage.
+        note: latency >= SLOW_MS ? `${latency} ms — slow, served anyway` : `${latency} ms`,
       };
     }
     return {
@@ -167,7 +180,7 @@ async function probeHost(hostname: string): Promise<{
       http_status: null,
       latency_ms: null,
       code_label: isTimeout ? "Timeout" : "No response",
-      note: isTimeout ? "No response within 6s" : "Connection failed",
+      note: isTimeout ? `No response within ${Math.round(timeoutMs / 1000)}s` : "Connection failed",
     };
   }
 }
