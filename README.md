@@ -67,8 +67,12 @@ the runs are grouped per workflow to give the latest result plus the last 7 as a
 | `NEVER RUN` | Workflow file exists but has never been triggered |
 
 Repos sort worst-first, and each repo takes the state of its unhealthiest workflow.
-Filter tabs narrow to failing / running / passing / never-run; the search box filters
-by repo or workflow name. Scans are capped at 40 repos (`GITHUB_REPO_LIMIT` overrides)
+
+The top tab row splits the board by account or organization. Each owner tab carries its
+workflow count and, when something under it is broken, a red dot — so you can tell which
+account needs you before selecting it. Everything below the row is scoped to the
+selection, including the result counts. Under that, filter tabs narrow to failing /
+running / passing / never-run, and the search box filters by repo or workflow name. Scans are capped at 40 repos (`GITHUB_REPO_LIMIT` overrides)
 so one refresh can't exhaust the Worker's subrequest budget or the hourly GitHub rate
 limit — the remaining quota is printed in the page footer.
 

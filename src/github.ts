@@ -135,6 +135,7 @@ export interface WorkflowCard {
 
 export interface RepoCard {
   name: string;
+  owner: string;
   full_name: string;
   url: string;
   private: boolean;
@@ -144,9 +145,17 @@ export interface RepoCard {
   workflows: WorkflowCard[];
 }
 
+export interface OwnerSummary {
+  login: string;
+  repos: number;
+  workflows: number;
+  failing: number;
+}
+
 export interface GithubFleet {
   generated_at: string;
   repos: RepoCard[];
+  owners: OwnerSummary[];
   totals: Record<RunState, number>;
   scanned_repos: number;
   repos_with_workflows: number;
@@ -280,6 +289,7 @@ export async function buildGithubFleet(env: Env): Promise<GithubFleet> {
 
       return {
         name: repo.name,
+        owner: repo.full_name.split("/")[0],
         full_name: repo.full_name,
         url: repo.html_url,
         private: repo.private,
@@ -309,9 +319,24 @@ export async function buildGithubFleet(env: Env): Promise<GithubFleet> {
     }
   }
 
+  // One entry per account or org, so the page can be filtered down to the one
+  // you're actually responsible for right now.
+  const ownerMap = new Map<string, OwnerSummary>();
+  for (const repo of repoCards) {
+    const entry = ownerMap.get(repo.owner) ?? { login: repo.owner, repos: 0, workflows: 0, failing: 0 };
+    entry.repos++;
+    entry.workflows += repo.workflows.length;
+    entry.failing += repo.workflows.filter((w) => w.state === "failure" || w.state === "warn").length;
+    ownerMap.set(repo.owner, entry);
+  }
+  const owners = [...ownerMap.values()].sort(
+    (a, b) => b.failing - a.failing || b.workflows - a.workflows || a.login.localeCompare(b.login)
+  );
+
   return {
     generated_at: new Date().toISOString(),
     repos: repoCards,
+    owners,
     totals,
     scanned_repos: repos.length,
     repos_with_workflows: repoCards.length,

@@ -46,6 +46,7 @@ const FILTERS = [
 
 let fleet = null;
 let activeFilter = "all";
+let activeOwner = "all";
 let query = "";
 
 function historyStrip(history) {
@@ -112,13 +113,32 @@ function render() {
     <div class="stat running"><div class="n mono">${t.running}</div><div class="l">Running</div></div>
     <div class="stat idle"><div class="n mono">${t.neutral + t.none}</div><div class="l">Idle / never run</div></div>`;
 
+  const ownerCount = (data.owners ?? []).length;
   document.getElementById("subline").textContent =
-    `${data.workflow_count} workflow${data.workflow_count === 1 ? "" : "s"} across ${data.repos_with_workflows} of ${data.scanned_repos} repos scanned, read from GitHub ${new Date(data.generated_at).toLocaleTimeString()}.`;
+    `${data.workflow_count} workflow${data.workflow_count === 1 ? "" : "s"} across ${data.repos_with_workflows} of ${data.scanned_repos} repos scanned, under ${ownerCount} account${ownerCount === 1 ? "" : "s"}, read from GitHub ${new Date(data.generated_at).toLocaleTimeString()}.`;
+
+  // An owner that vanished between refreshes shouldn't strand the page on an
+  // empty selection.
+  const owners = data.owners ?? [];
+  if (activeOwner !== "all" && !owners.some((o) => o.login === activeOwner)) activeOwner = "all";
+
+  const totalFailing = owners.reduce((n, o) => n + o.failing, 0);
+  document.getElementById("ownerbar").innerHTML = [
+    { login: "all", label: "all owners", workflows: data.workflow_count, failing: totalFailing },
+    ...owners.map((o) => ({ login: o.login, label: o.login, workflows: o.workflows, failing: o.failing })),
+  ].map((o) => {
+    const active = o.login === activeOwner;
+    return `<button class="tab ${active ? "active" : ""}" role="tab" aria-selected="${active}" data-owner="${esc(o.login)}">${
+      o.failing ? '<span class="fail-dot"></span>' : ""
+    }${esc(o.label)} <span class="tab-count">${o.workflows}</span></button>`;
+  }).join("");
+
+  // Everything below the owner tabs describes the selected owner only, so the
+  // result counts have to be scoped the same way.
+  const scoped = activeOwner === "all" ? data.repos : data.repos.filter((r) => r.owner === activeOwner);
 
   document.getElementById("tabbar").innerHTML = FILTERS.map((f) => {
-    const count = f.key === "all"
-      ? data.workflow_count
-      : data.repos.reduce((n, r) => n + r.workflows.filter(f.match).length, 0);
+    const count = scoped.reduce((n, r) => n + r.workflows.filter(f.match).length, 0);
     const active = f.key === activeFilter;
     return `<button class="tab ${active ? "active" : ""}" role="tab" aria-selected="${active}" data-key="${f.key}">${f.label} <span class="tab-count">${count}</span></button>`;
   }).join("");
@@ -126,7 +146,7 @@ function render() {
   const filter = FILTERS.find((f) => f.key === activeFilter) ?? FILTERS[0];
   const q = query.trim().toLowerCase();
 
-  const sections = data.repos
+  const sections = scoped
     .map((repo) => {
       const repoHit = repo.full_name.toLowerCase().includes(q);
       const workflows = repo.workflows.filter(
@@ -141,6 +161,13 @@ function render() {
     : `<div class="empty-state">${data.workflow_count
         ? "No workflows match this filter."
         : `No workflows found in the ${data.scanned_repos} repos scanned. Add a file under <code>.github/workflows/</code> and it shows up here.`}</div>`;
+
+  document.querySelectorAll("#ownerbar .tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      activeOwner = tab.dataset.owner;
+      render();
+    });
+  });
 
   document.getElementById("scan-note").textContent =
     `scanned ${data.scanned_repos} repos (personal + org), newest push first${data.truncated ? ` (${data.truncated} more not scanned)` : ""}`;

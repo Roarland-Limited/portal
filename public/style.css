@@ -332,6 +332,21 @@ section.group { margin-bottom: 30px; }
 .tab-count { color: var(--muted); font-weight: 600; margin-left: 2px; }
 .tab.active .tab-count { color: var(--accent); }
 
+/* An owner tab carries a mark when something under it is broken, so you can
+   see which account needs you before selecting it. */
+.fail-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--bad);
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+#ownerbar { margin-bottom: 14px; }
+#ownerbar .tab { font-size: 13px; }
+
 .filter-input {
   background: var(--panel);
   border: 1px solid var(--line);
